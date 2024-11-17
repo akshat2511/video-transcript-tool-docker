@@ -1,0 +1,25 @@
+# Use Node.js base image
+FROM node:18
+# Set environment variables during build (Optional)
+ENV link="mongodb+srv://httwarriors12:akshat@cluster0.n9sknas.mongodb.net/hacktt"
+ENV base="http://localhost:5000"
+ENV clientid="EivGZZRWyXiAhDX7Viafs8b9vaafvdct"
+ENV dev="https://dev-ktrnto3xhx5pfgg2.us.auth0.com"
+ENV assembly="3ec7b601debf42f584c558d73a58753b"
+# Set working directory
+WORKDIR /usr/src/app
+
+# Copy package.json and package-lock.json
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy application files
+COPY . .
+
+# Expose the backend port
+EXPOSE 5000
+
+# Run the application
+CMD ["node", "server.js"]

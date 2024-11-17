@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - link='mongodb+srv://httwarriors12:akshat@cluster0.n9sknas.mongodb.net/hacktt'
+      - base='http://localhost:5000'
+      - clientid='EivGZZRWyXiAhDX7Viafs8b9vaafvdct'
+      - dev='https://dev-ktrnto3xhx5pfgg2.us.auth0.com'
+      - assembly='3ec7b601debf42f584c558d73a58753b'
+    depends_on:
+      - groq
+      - assemblyai
+    volumes:
+      - ./backend/uploads:/usr/src/app/uploads
+
+  groq:
+    build:
+      context: ./groq
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    environment:
+      - groq='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'
+
+  assemblyai:
+    build:
+      context: ./assemblyai
+      dockerfile: Dockerfile
+    ports:
+      - "5002:5002"
+    environment:
+      - assembly='3ec7b601debf42f584c558d73a58753b'
