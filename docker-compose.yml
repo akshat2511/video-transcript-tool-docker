@@ -18,6 +18,8 @@ services:
       - assemblyai
     volumes:
       - ./backend/uploads:/usr/src/app/uploads
+    networks:
+      - app-network
 
   groq:
     build:
@@ -27,6 +29,8 @@ services:
       - "5001:5001"
     environment:
       - groq='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'
+    networks:
+      - app-network
 
   assemblyai:
     build:
@@ -36,3 +40,8 @@ services:
       - "5002:5002"
     environment:
       - assembly='3ec7b601debf42f584c558d73a58753b'
+    networks:
+      - app-network
+networks:
+  app-network:
+    driver: bridge

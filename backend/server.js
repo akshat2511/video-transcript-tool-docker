@@ -16,7 +16,8 @@ const app = express();
 app.use(bp.urlencoded({ extended: true }));
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
-mongoose.connect(process.env.link)
+console.log(process.env.link)
+mongoose.connect('mongodb+srv://httwarriors12:akshat@cluster0.n9sknas.mongodb.net/hacktt')
 const responseSchema = new Schema({
   transcript: {
     type: String,
@@ -75,42 +76,53 @@ const config = {
   authRequired: false,
   auth0Logout: true,
   secret: 'a long, randomly-generated string stored in env',
-  baseURL: process.env.base,
+  baseURL: 'http://localhost:5000',
   clientID: process.env.clientid,
-  issuerBaseURL: process.env.dev
+  issuerBaseURL: 'https://dev-ktrnto3xhx5pfgg2.us.auth0.com'
 };
 
 // auth router attaches /login, /logout, and /callback routes to the baseURL
+// console.log('Base URL:', process.env.dev, config);
+
 app.use(auth(config));
 
 // req.isAuthenticated is provided from the auth router
 app.get('/', async (req, res) => {
-  //   res.sendFile(path.join(__dirname, (req.oidc.isAuthenticated() ? 'Logged in' : 'land.html')));
-  // res.render((req.oidc.isAuthenticated() ? 'logedin' : 'land'))
-  let verified = req.oidc.isAuthenticated();
-  if (!verified) {
-    res.render("land.ejs");
-  }
-  else {
-    let data = await req.oidc.user;
-    await console.log(req.oidc.user);
+  try {
+    // Check if the user is authenticated
+    let verified = req.oidc.isAuthenticated();
 
-    let userdata = await UserDetails.find({ email: data.email });
-    if (userdata.length == 0) {
-      const u = new UserDetails({ email: data.email })
-      await u.save();
+    if (!verified) {
+      // If not authenticated, render the landing page
+      return res.render("land.ejs");
     }
 
-    //   let userInfo = req.oidc.user;
+    // Get user information
+    let data =  req.oidc.user;
     let photo = data.picture;
-    //   let userData = await UserDetails.find({ email: userInfo.email});
-    //   let userCounter = userData[0].counter + 1;
-    //   await user.findOneAndUpdate({ email: data.email }, { counter: userCounter });
-    res.render("logedin.ejs", { userData: data, photo: photo, tran: 'Transcription will be available once the video has been processed.', ans: " " });
 
+    // Retrieve the transcript from the query parameter
+    let transcript = req.query.transcript || 'Transcription will be available once the video has been processed.';
+    if(req.query.transcript){
+      // let data = req.oidc.user;
+      let x = new Response({ transcript: req.query.transcript, date: new Date() });
+      await x.save();
+      console.log(x);
+      let m = await UserDetails.findOneAndUpdate({ email: data.email }, { $push: { responses: x }, $inc: { creditsLeft: -1 } })
+    }
+    // Render the logged-in page with the transcript
+    res.render("logedin.ejs", {
+      userData: data,
+      photo: photo,
+      tran: transcript,
+      ans: " "
+    });
+  } catch (error) {
+    console.error("Error handling / route:", error);
+    res.status(500).send("Internal Server Error");
   }
-
 });
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'uploads/'); // Upload directory (ensure it exists or create it)
@@ -179,36 +191,57 @@ app.post('/question', async (req, res) => {
   const prompt = req.body.searchQuery;
   // import requests
   // var requests = require('requests');
-  const Groq = require('groq-sdk');
+  // const Groq = require('groq-sdk');
 
-  const groq = new Groq({ apiKey: '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' });
+  // const groq = new Groq({ apiKey: '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' });
 
-  const chatCompletion = await groq.chat.completions.create({
-    "messages": [
-      {
-        "role": "user",
-        "content": `${prompt} ${req.body.transcript}`
-      },
+  // const chatCompletion = await groq.chat.completions.create({
+  //   "messages": [
+  //     {
+  //       "role": "user",
+  //       "content": `${prompt} ${req.body.transcript}`
+  //     },
 
-    ],
-    "model": "llama3-8b-8192",
-    "temperature": 1,
-    "max_tokens": 1024,
-    "top_p": 1,
-    "stream": false,
-    "stop": null
-  });
+  //   ],
+  //   "model": "llama3-8b-8192",
+  //   "temperature": 1,
+  //   "max_tokens": 1024,
+  //   "top_p": 1,
+  //   "stream": false,
+  //   "stop": null
+  // });
 
-  console.log(chatCompletion.choices[0].message.content);
-
+  // console.log(chatCompletion.choices[0].message.content);
 
 
   let data = req.oidc.user;
 
+  try {
+    const response = await fetch('http://host.docker.internal:5001/question', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text: req.body.transcript,
+        prompt: prompt,
+      }),
+    });
+  
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+  
+    var result = await response.json();
+    // console.log(result);
+  } catch (error) {
+    console.error('Error:', error);
+  }
+
   // const data = await response.json();
   // console.log(response)
 
-  res.render("logedin.ejs", { userData: data, photo: data.picture, tran: req.body.transcript, ans: chatCompletion.choices[0].message.content });
+  res.render("logedin.ejs", { userData: data, photo: data.picture, tran: req.body.transcript, ans: result });
 
 
 });
@@ -280,6 +313,7 @@ app.post("/payment", async (req, res) => {
   const { plan } = req.body;
   let totalAmount = 0;
   let credit = 0;
+console.log(req.body);
 
   if (plan == "basic") {
     totalAmount = 100;
@@ -303,12 +337,13 @@ app.post("/payment", async (req, res) => {
     if (!order) return res.status(500).send("Some error occurred");
 
     const responseOptions = {
+      success: true,
       key: process.env.RAZORPAY_KEY_ID,
       amount: order.amount.toString(),
       currency: order.currency,
       name: req.oidc?.user?.name || "Guest User",
       description: "Credit Purchase",
-      image: "https://ik.imagekit.io/vaibhav11/Koe_Cafe/Additional/tr:w-40,h-40/logo1.jpg",
+      image: "https://lh3.googleusercontent.com/a/AGNmyxYVPmzybxNWLF3EU5ELKmkFYKJqbAp0mpA28GSAaA=s200-c",
       order_id: order.id,
       prefill: {
         email: req.oidc?.user?.email || "example@example.com",
@@ -317,8 +352,9 @@ app.post("/payment", async (req, res) => {
       theme: { color: "#2094f3" },
       credit: credit,
     };
+console.log(responseOptions);
 
-    res.json({...responseOptions,email: req.oidc?.user?.email});
+    res.status(200).send(responseOptions);
   } catch (error) {
     console.error(error);
     res.status(500).send("Error creating Razorpay order");

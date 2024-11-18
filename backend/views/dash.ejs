@@ -138,7 +138,7 @@
 
     <!-- Upgrade Plan Modal -->
     <div id="upgradeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center">
-        <form class="bg-white rounded-xl p-8 max-w-md w-full mx-4" action="/payment" method="post">
+        <form class="bg-white rounded-xl p-8 max-w-md w-full mx-4 akshat" >
             <h2 class="text-2xl font-bold text-[#111518] mb-6">Upgrade Plan</h2>
             <div class="space-y-4">
                 <label
@@ -168,8 +168,8 @@
                     <input type="radio" name="plan" value="pro" class="ml-4 accent-[#2094f3]" />
                 </label>
             </div>
-            <button type="button" onclick="showPaymentModal(document.querySelector('input[name=plan]:checked').value)"
-                class="w-full bg-[#2094f3] text-white py-3 rounded-xl font-bold text-sm tracking-[0.015em] hover:bg-[#1884e3] transition-colors mt-6">
+            <button type="submit"
+                class="w-full bg-[#2094f3]  text-white py-3 rounded-xl font-bold text-sm tracking-[0.015em] hover:bg-[#1884e3] transition-colors mt-6">
                 Upgrade Plan
             </button>
 
@@ -180,13 +180,72 @@
         </form>
     </div>
     <% let opt=options %>
-        <script src="https://checkout.razorpay.com/v1/checkout.js">
-            console.log(options);
-            if (opt) {
-                const paymentObject = new window.Razorpay(opt);
-                paymentObject.open();
-            }
-        </script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+    
+    $(document).ready(function(){
+        $('.akshat').submit(function(e){
+            e.preventDefault();
+    
+            var formData = $(this).serialize();
+    
+            $.ajax({
+                url:"/payment",
+                type:"POST",
+                data: formData,
+                success:function(res){
+                    if(res.success){
+                        console.log(res);
+
+                        var options = {
+                            "key": ""+res.key+"",
+                            "amount": ""+res.amount+"",
+                            "currency": "INR",
+                            "name": ""+res.name+"",
+                            "description": ""+res.description+"",
+                            "image": "https://lh3.googleusercontent.com/a/AGNmyxYVPmzybxNWLF3EU5ELKmkFYKJqbAp0mpA28GSAaA=s200-c",
+                            "order_id": ""+res.order_id+"",
+                            "handler": function (response){
+                                // alert("Payment Succeeded");
+                                $.ajax({
+                                    url:"/payment/success"
+                                });
+
+
+
+
+                                // window.open("/","_self")
+                            },
+                            "prefill": {
+                                "contact":""+res.prefill.contact+"",
+                                "name": ""+res.email+"",
+                                "email": ""+res.email+""
+                            },
+                            "notes" : {
+                                "description":""+res.description+""
+                            },
+                            "theme": {
+                                "color": "#2300a3"
+                            }
+                        };
+                        var razorpayObject = new Razorpay(options);
+                        razorpayObject.on('payment.failed', function (response){
+                                alert("Payment Failed");
+                        });
+                        razorpayObject.open();
+                    }
+                    else{
+                        alert(res.msg);
+                    }
+                }
+            })
+    
+        });
+    });
+    
+    </script>
         <script>
             function showUpgradeModal() {
                 document.getElementById('upgradeModal').classList.remove('hidden');
@@ -212,71 +271,79 @@
                     hideUpgradeModal();
                 }
             });
+            // async function showPaymentModal(plan) {
+            //     console.log(plan);
 
-            async function showPaymentModal(plan) {
-                try {
-                    const response = await fetch('/payment', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ plan }),
-                    });
+            //     try {
+            //         // Step 1: Create the payment request on the backend
+            //         const response = await fetch('http://localhost:5000/payment', {
+            //             method: 'POST',
+            //             headers: {
+            //                 'Content-Type': 'application/json',
+            //             },
+            //             body: JSON.stringify({ plan: plan }),
+            //         });
 
-                    if (!response.ok) {
-                        throw new Error('Failed to create payment');
-                    }
+            //         if (!response.ok) {
+            //             throw new Error('Failed to create payment');
+            //         }
 
-                    const options = await response.json();
-                    const razorpay = new Razorpay(options);
+            //         // Step 2: Get the Razorpay payment options from the backend
+            //         const options = await response.json();
+            //         const razorpay = new Razorpay(options); // Initialize Razorpay
 
-                    razorpay.on('payment.failed', function (response) {
-                        alert('Payment failed. Please try again.');
-                        console.error(response.error);
-                    });
+            //         // Step 3: Payment failure handler
+            //         razorpay.on('payment.failed', function (response) {
+            //             alert('Payment failed. Please try again.');
+            //             console.error(response.error);
+            //         });
 
-                    razorpay.open();
+            //         // Open the Razorpay modal
+            //         razorpay.open();
 
-                    let credit = 20;
-                    if (plan == "basic") {
-                        credit = 10;
-                    } else if (plan == "standard") {
-                        credit = 20;
-                    } else {
-                        credit = 30;
-                    }
+            //         // Step 4: Calculate credits based on the plan
+            //         let credit = 20;  // Default credit for 'premium' plan
+            //         if (plan === "basic") {
+            //             credit = 10; // Credits for basic plan
+            //         } else if (plan === "standard") {
+            //             credit = 20; // Credits for standard plan
+            //         } else if (plan === "premium") {
+            //             credit = 30; // Credits for premium plan
+            //         }
 
-                    const data = {
-                        emailId: options.emailId,
-                        credit: credit
-                    };
-                    console.log(data);
-                    
+            //         // Prepare the data for the backend (after payment success)
+            //         const data = {
+            //             emailId: options.email, // Assuming the email is part of the response
+            //             credit: credit,         // Credits to be added based on plan
+            //         };
 
-                    const resp = await fetch('/payment/success', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(data)
-                    });
+            //         console.log(data);
 
-                    console.log(await resp.json());
+            //         // Step 5: Send payment success data to the backend
+            //         const resp = await fetch('/payment/success', {
+            //             method: 'POST',
+            //             headers: {
+            //                 'Content-Type': 'application/json',
+            //             },
+            //             body: JSON.stringify(data),
+            //         });
 
+            //         const successResponse = await resp.json();
+            //         console.log(successResponse); // Log the backend's response after payment success
 
-                } catch (error) {
-                    console.error(error);
-                    alert('An error occurred while processing the payment.');
-                }
-            }
+            //     } catch (error) {
+            //         console.error(error);
+            //         alert('An error occurred while processing the payment.');
+            //     }
+            // }
 
             // Trigger payment modal from the upgrade modal button
-            document.querySelectorAll('input[name="plan"]').forEach((radio) => {
-                radio.addEventListener('change', () => {
-                    const selectedPlan = radio.value;
-                    showPaymentModal(selectedPlan);
-                });
-            });
+            // document.querySelectorAll('input[name="plan"]').forEach((radio) => {
+            //     radio.addEventListener('change', () => {
+            //         const selectedPlan = radio.value;
+            //         showPaymentModal(selectedPlan);
+            //     });
+            // });
 
         </script>
 </body>
