@@ -77,7 +77,7 @@ const config = {
   auth0Logout: true,
   secret: 'a long, randomly-generated string stored in env',
   baseURL: 'http://localhost:5000',
-  clientID: process.env.clientid,
+  clientID: 'EivGZZRWyXiAhDX7Viafs8b9vaafvdct',
   issuerBaseURL: 'https://dev-ktrnto3xhx5pfgg2.us.auth0.com'
 };
 
@@ -347,7 +347,7 @@ console.log(req.body);
       order_id: order.id,
       prefill: {
         email: req.oidc?.user?.email || "example@example.com",
-        contact: "9876543210",
+        contact: "6387488465",
       },
       theme: { color: "#2094f3" },
       credit: credit,
@@ -362,19 +362,20 @@ console.log(responseOptions);
 });
 
 app.post("/payment/success", async (req, res) => {
-  const { emailId, credit } = req.body;
+  const { email, credit ,razorpayPaymentId, orderCreationId, razorpaySignature} = req.body;
 
   console.log(req.body);
-  // if (!validateSignature(razorpayPaymentId, orderCreationId, razorpaySignature)) {
-  //   return res.status(400).json({ msg: "Transaction not legit!" });
-  // }
+  if (!validateSignature(razorpayPaymentId, orderCreationId, razorpaySignature)) {
+    return res.status(400).json({ msg: "Transaction not legit!" });
+  }
 
 
-  await UserDetails.findOneAndUpdate({ email: emailId }, { $inc: { creditsLeft: credit } });
+ let ak= await UserDetails.findOneAndUpdate({ email: email }, { $inc: { creditsLeft: credit } });
+console.log(ak);
 
   res.status(200).json({
     success: true, message: "Order Placed Successfully!",
-    orderId: razorpayOrderId,
+    orderId: orderCreationId,
     paymentId: razorpayPaymentId
   });
 });

@@ -138,7 +138,7 @@
 
     <!-- Upgrade Plan Modal -->
     <div id="upgradeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center">
-        <form class="bg-white rounded-xl p-8 max-w-md w-full mx-4 akshat" >
+        <form class="bg-white rounded-xl p-8 max-w-md w-full mx-4 akshat">
             <h2 class="text-2xl font-bold text-[#111518] mb-6">Upgrade Plan</h2>
             <div class="space-y-4">
                 <label
@@ -180,72 +180,86 @@
         </form>
     </div>
     <% let opt=options %>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
 
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-    <script>
-    
-    $(document).ready(function(){
-        $('.akshat').submit(function(e){
-            e.preventDefault();
-    
-            var formData = $(this).serialize();
-    
-            $.ajax({
-                url:"/payment",
-                type:"POST",
-                data: formData,
-                success:function(res){
-                    if(res.success){
-                        console.log(res);
+        <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+        <script>
 
-                        var options = {
-                            "key": ""+res.key+"",
-                            "amount": ""+res.amount+"",
-                            "currency": "INR",
-                            "name": ""+res.name+"",
-                            "description": ""+res.description+"",
-                            "image": "https://lh3.googleusercontent.com/a/AGNmyxYVPmzybxNWLF3EU5ELKmkFYKJqbAp0mpA28GSAaA=s200-c",
-                            "order_id": ""+res.order_id+"",
-                            "handler": function (response){
-                                // alert("Payment Succeeded");
-                                $.ajax({
-                                    url:"/payment/success"
+            $(document).ready(function () {
+                $('.akshat').submit(function (e) {
+                    e.preventDefault();
+
+                    var formData = $(this).serialize();
+
+                    $.ajax({
+                        url: "/payment",
+                        type: "POST",
+                        data: formData,
+                        success: function (res) {
+                            if (res.success) {
+                                console.log(res);
+
+                                var options = {
+                                    "key": "" + res.key + "",
+                                    "amount": "" + res.amount + "",
+                                    "currency": "INR",
+                                    "name": "" + res.name + "",
+                                    "description": "" + res.description + "",
+                                    "image": "https://lh3.googleusercontent.com/a/AGNmyxYVPmzybxNWLF3EU5ELKmkFYKJqbAp0mpA28GSAaA=s200-c",
+                                    "order_id": "" + res.order_id + "",
+                                    "handler": function (response) {
+                                        const data = {
+                                            orderCreationId: res.order_id,
+                                            razorpayPaymentId: response.razorpay_payment_id,
+                                            razorpayOrderId: response.razorpay_order_id,
+                                            razorpaySignature: response.razorpay_signature,
+                                            credit: res.credit, email: res.prefill.email
+                                        };
+
+                                        $.ajax({
+                                            url: "/payment/success", type: "POST", data:data
+                                        });
+                                        // alert("Payment Succeeded");
+                                        setTimeout(function () {
+                                            window.location.reload(true);
+
+                                        }, 2000);
+
+
+
+
+
+
+                                        // window.open("/","_self")
+                                    },
+                                    "prefill": {
+                                        "contact": "" + res.prefill.contact + "",
+                                        "name": "" + res.email + "",
+                                        "email": "" + res.email + ""
+                                    },
+                                    "notes": {
+                                        "description": "" + res.description + ""
+                                    },
+                                    "theme": {
+                                        "color": "#2300a3"
+                                    }
+                                };
+                                var razorpayObject = new Razorpay(options);
+                                razorpayObject.on('payment.failed', function (response) {
+                                    alert("Payment Failed");
                                 });
-
-
-
-
-                                // window.open("/","_self")
-                            },
-                            "prefill": {
-                                "contact":""+res.prefill.contact+"",
-                                "name": ""+res.email+"",
-                                "email": ""+res.email+""
-                            },
-                            "notes" : {
-                                "description":""+res.description+""
-                            },
-                            "theme": {
-                                "color": "#2300a3"
+                                razorpayObject.open();
                             }
-                        };
-                        var razorpayObject = new Razorpay(options);
-                        razorpayObject.on('payment.failed', function (response){
-                                alert("Payment Failed");
-                        });
-                        razorpayObject.open();
-                    }
-                    else{
-                        alert(res.msg);
-                    }
-                }
-            })
-    
-        });
-    });
-    
-    </script>
+                            else {
+                                alert(res.msg);
+                            }
+                        }
+                    })
+
+                });
+            });
+
+        </script>
         <script>
             function showUpgradeModal() {
                 document.getElementById('upgradeModal').classList.remove('hidden');
