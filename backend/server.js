@@ -98,18 +98,30 @@ app.get('/', async (req, res) => {
     }
 
     // Get user information
-    let data =  req.oidc.user;
+    let data = req.oidc.user;
     let photo = data.picture;
+
+    // Check user's credits
+    const userDetails = await UserDetails.findOne({ email: data.email });
+
+    if (!userDetails || userDetails.creditsLeft <= 0) {
+      // Redirect to /dash if credits are insufficient
+      return res.redirect("http://localhost:5000/dash");
+    }
 
     // Retrieve the transcript from the query parameter
     let transcript = req.query.transcript || 'Transcription will be available once the video has been processed.';
-    if(req.query.transcript){
-      // let data = req.oidc.user;
+    if (req.query.transcript) {
       let x = new Response({ transcript: req.query.transcript, date: new Date() });
       await x.save();
-      console.log(x);
-      let m = await UserDetails.findOneAndUpdate({ email: data.email }, { $push: { responses: x }, $inc: { creditsLeft: -1 } })
+
+      // Update user's responses and decrement credits
+      await UserDetails.findOneAndUpdate(
+        { email: data.email },
+        { $push: { responses: x }, $inc: { creditsLeft: -1 } }
+      );
     }
+
     // Render the logged-in page with the transcript
     res.render("logedin.ejs", {
       userData: data,
@@ -122,6 +134,7 @@ app.get('/', async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 });
+
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {

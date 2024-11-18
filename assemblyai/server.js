@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const multer = require('multer');
 const app = express();
+
 dotenv.config();
 app.use(cors({
   origin: '*', // Allow all origins or specify allowed ones
